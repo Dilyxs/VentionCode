@@ -3,7 +3,6 @@ package ventionroom
 import (
 	"context"
 	"math"
-	"math/rand"
 	"time"
 )
 
@@ -67,9 +66,11 @@ func (r *Room) Run(ctx context.Context) {
 
 // AskQuestions's role is to send to ConnectionToWebsocketChan Questions, and evaluate responses that players get
 func (q *Manager) AskQuestions(ctx context.Context, localChan <-chan UserResponse) {
+	questionNum := 0
 	for range q.QuestionCount {
-		questionNum := rand.Int31n(int32(len(q.Questions)))
+		// questionNum := rand.Int31n(int32(len(q.Questions)))
 		pickedQuestion := q.Questions[questionNum]
+		questionNum++
 
 		// NOTE: here we send to the process that owns all the connections the question
 		q.ConnectionToWebsocketChan <- Question(pickedQuestion)
@@ -86,7 +87,7 @@ func (q *Manager) AskQuestions(ctx context.Context, localChan <-chan UserRespons
 			case req := <-localChan:
 				if req.QuestionID != pickedQuestion.QuestionID {
 					select {
-					case req.ResponseChan <- QuestionAcknowledgmentResponse{ID: rand.Int31n(math.MaxInt32), Registered: false}:
+					case req.ResponseChan <- QuestionAcknowledgmentResponse{Registered: false}:
 					default:
 					}
 					continue
@@ -97,7 +98,7 @@ func (q *Manager) AskQuestions(ctx context.Context, localChan <-chan UserRespons
 					result[false] = append(result[false], UserID(req.UserID))
 				}
 				select {
-				case req.ResponseChan <- QuestionAcknowledgmentResponse{ID: rand.Int31n(math.MaxInt32), Registered: true}:
+				case req.ResponseChan <- QuestionAcknowledgmentResponse{Registered: true}:
 				default:
 				}
 			}

@@ -116,7 +116,6 @@ type (
 
 type QuestionAcknowledgmentResponse struct {
 	Registered bool
-	ID         int32
 }
 type UserResponse struct {
 	UserID       int32
