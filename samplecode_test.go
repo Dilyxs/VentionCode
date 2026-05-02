@@ -25,6 +25,7 @@ func buildRoom(t *testing.T, isRoomClosed bool) *Room {
 }
 
 func assertRoomCommandResponse(expectedResponse RoomCommandResponse, readingChan <-chan RoomCommandResponse, t *testing.T) RoomCommandResponse {
+	t.Helper()
 	select {
 	case <-time.After(defaultWaitTime):
 		var emptyResponse RoomCommandResponse
@@ -63,6 +64,7 @@ func TestRoom_RunExitsOnContextCancel(t *testing.T) {
 }
 
 func TestRoom_CheckAddPlayerCommand(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name             string
 		userID           UserID
@@ -84,6 +86,53 @@ func TestRoom_CheckAddPlayerCommand(t *testing.T) {
 			responseChan := make(chan RoomCommandResponse, 1)
 			addPlayerCommand := AddPlayerCommand{ID: tc.userID, OutputChan: responseChan}
 			room.ExternalIncomingMessages <- addPlayerCommand
+			assertRoomCommandResponse(tc.expectedResponse, responseChan, t)
+		})
+	}
+}
+
+func TestRoom_CheckIfUserAllowedToJoin(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name             string
+		isRoomClosed     bool
+		userID           UserID
+		expectedResponse RoomCommandResponse
+		ValidUserIDs     bool
+	}{
+		{
+			name:             "room is closed",
+			isRoomClosed:     true,
+			userID:           1,
+			expectedResponse: RoomCommandResponse{Err: NewRoomError(RoomErrorRoomClosed), content: RoomCommandContentNone},
+		},
+		{
+			name:             "user is allowed to join",
+			isRoomClosed:     false,
+			userID:           1,
+			expectedResponse: RoomCommandResponse{content: RoomCommandContentAllowedToJoin, Err: nil},
+			ValidUserIDs:     true,
+		},
+		{
+			name:             "user is not allowed to join",
+			isRoomClosed:     false,
+			userID:           2,
+			expectedResponse: RoomCommandResponse{content: RoomCommandContentNoPermissionToJoin, Err: NewRoomError(RoomErrorPermissionDenied)},
+			ValidUserIDs:     false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			room := buildRoom(t, tc.isRoomClosed)
+			if tc.ValidUserIDs {
+				responseChan := make(chan RoomCommandResponse, 1)
+				addPlayerCommand := AddPlayerCommand{ID: tc.userID, OutputChan: responseChan}
+				room.ExternalIncomingMessages <- addPlayerCommand
+				assertRoomCommandResponse(RoomCommandResponse{content: RoomCommandContentPermissionToJoinGame, Err: nil}, responseChan, t)
+			}
+			responseChan := make(chan RoomCommandResponse, 1)
+			checkCommand := CheckIfUserAllowedToJoin{ID: tc.userID, OutputChan: responseChan}
+			room.ExternalIncomingMessages <- checkCommand
 			assertRoomCommandResponse(tc.expectedResponse, responseChan, t)
 		})
 	}
