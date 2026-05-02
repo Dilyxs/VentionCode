@@ -2,6 +2,58 @@ package ventionroom
 
 import "time"
 
+type RoomErrorCode int
+
+const (
+	RoomErrorUnknown RoomErrorCode = iota
+	RoomErrorRoomClosed
+	RoomErrorPermissionDenied
+)
+
+type RoomError struct {
+	Code RoomErrorCode
+}
+
+func (e RoomError) Error() string {
+	switch e.Code {
+	case RoomErrorRoomClosed:
+		return "room is currently full"
+	case RoomErrorPermissionDenied:
+		return "don't have permission to join"
+	default:
+		return "unknown room error"
+	}
+}
+
+func NewRoomError(code RoomErrorCode) error {
+	return RoomError{Code: code}
+}
+
+type RoomCommandContentCode int
+
+const (
+	RoomCommandContentNone RoomCommandContentCode = iota
+	RoomCommandContentAllowedToJoin
+	RoomCommandContentNoPermissionToJoin
+	RoomCommandContentPermissionToJoinGame
+	RoomCommandContentAddedWebsocket
+)
+
+func (c RoomCommandContentCode) String() string {
+	switch c {
+	case RoomCommandContentAllowedToJoin:
+		return "allowed to join!"
+	case RoomCommandContentNoPermissionToJoin:
+		return "don't have the permission to join!"
+	case RoomCommandContentPermissionToJoinGame:
+		return "permission to join game!"
+	case RoomCommandContentAddedWebsocket:
+		return "added websocket!"
+	default:
+		return ""
+	}
+}
+
 type UserDisconnection struct {
 	ID UserID
 }
@@ -11,7 +63,7 @@ type CheckIfUserAllowedToJoin struct {
 }
 type RoomCommandResponse struct {
 	Err     error
-	content string
+	content RoomCommandContentCode
 }
 type AddPlayerCommand struct {
 	ID         UserID

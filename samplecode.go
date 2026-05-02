@@ -2,7 +2,6 @@ package ventionroom
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"math/rand"
 	"time"
@@ -38,24 +37,24 @@ func (r *Room) Run(ctx context.Context) {
 			switch cmd := command.(type) {
 			case CheckIfUserAllowedToJoin:
 				if r.IsClosed {
-					cmd.get_sendback_chan() <- RoomCommandResponse{Err: fmt.Errorf("room is currently full"), content: ""}
+					cmd.get_sendback_chan() <- RoomCommandResponse{Err: NewRoomError(RoomErrorRoomClosed), content: RoomCommandContentNone}
 					continue
 				}
 				if r.AllowedPlayers[cmd.ID] {
-					cmd.get_sendback_chan() <- RoomCommandResponse{content: "allowed to join!", Err: nil}
+					cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentAllowedToJoin, Err: nil}
 				} else {
-					cmd.get_sendback_chan() <- RoomCommandResponse{content: "don't have the permission to join!", Err: fmt.Errorf("don't have permission to join")}
+					cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentNoPermissionToJoin, Err: NewRoomError(RoomErrorPermissionDenied)}
 				}
 			case AddPlayerCommand:
 				r.AllowedPlayers[cmd.ID] = true
-				cmd.get_sendback_chan() <- RoomCommandResponse{content: "permission to join game!", Err: nil}
+				cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentPermissionToJoinGame, Err: nil}
 			case AddPlayerToWebsocketCommand:
 				localChan := make(chan Message, 1000)
 				// go ReadFromWebsocket(cmd.Conn, r.SocketsConn, cmd.ID, ctx)
 				// go WriteToWebsocket(cmd.Conn, localChan, ctx)
 				r.SocketsConn[cmd.ID] = localChan
 				// go WritePreviousMessagesToWebsocket(localChan, r.AllPreiousMessages, ctx)
-				cmd.get_sendback_chan() <- RoomCommandResponse{content: "added websocket!", Err: nil}
+				cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentAddedWebsocket, Err: nil}
 
 			}
 		}
