@@ -8,6 +8,7 @@ const (
 	RoomErrorUnknown RoomErrorCode = iota
 	RoomErrorRoomClosed
 	RoomErrorPermissionDenied
+	RoomErrorInvalidUserID
 )
 
 type RoomError struct {
@@ -20,6 +21,8 @@ func (e RoomError) Error() string {
 		return "room is currently full"
 	case RoomErrorPermissionDenied:
 		return "don't have permission to join"
+	case RoomErrorInvalidUserID:
+		return "invalid user id"
 	default:
 		return "unknown room error"
 	}

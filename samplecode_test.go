@@ -61,3 +61,30 @@ func TestRoom_RunExitsOnContextCancel(t *testing.T) {
 		t.Fatalf("Room.Run did not exit within delay: %v", defaultWaitTime)
 	}
 }
+
+func TestRoom_CheckAddPlayerCommand(t *testing.T) {
+	cases := []struct {
+		name             string
+		userID           UserID
+		expectedResponse RoomCommandResponse
+	}{
+		{
+			name:             "valid user ID",
+			userID:           1,
+			expectedResponse: RoomCommandResponse{content: RoomCommandContentPermissionToJoinGame, Err: nil},
+		}, {
+			name:             "invalid user ID",
+			userID:           -1,
+			expectedResponse: RoomCommandResponse{content: RoomCommandContentNoPermissionToJoin, Err: NewRoomError(RoomErrorInvalidUserID)},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			room := buildRoom(t, false)
+			responseChan := make(chan RoomCommandResponse, 1)
+			addPlayerCommand := AddPlayerCommand{ID: tc.userID, OutputChan: responseChan}
+			room.ExternalIncomingMessages <- addPlayerCommand
+			assertRoomCommandResponse(tc.expectedResponse, responseChan, t)
+		})
+	}
+}

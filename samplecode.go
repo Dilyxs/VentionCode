@@ -46,8 +46,12 @@ func (r *Room) Run(ctx context.Context) {
 					cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentNoPermissionToJoin, Err: NewRoomError(RoomErrorPermissionDenied)}
 				}
 			case AddPlayerCommand:
-				r.AllowedPlayers[cmd.ID] = true
-				cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentPermissionToJoinGame, Err: nil}
+				if int32(cmd.ID) > 0 && int32(cmd.ID) < math.MaxInt32 {
+					r.AllowedPlayers[cmd.ID] = true
+					cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentPermissionToJoinGame, Err: nil}
+				} else {
+					cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentNoPermissionToJoin, Err: NewRoomError(RoomErrorInvalidUserID)}
+				}
 			case AddPlayerToWebsocketCommand:
 				localChan := make(chan Message, 1000)
 				// go ReadFromWebsocket(cmd.Conn, r.SocketsConn, cmd.ID, ctx)
