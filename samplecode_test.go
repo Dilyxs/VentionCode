@@ -95,7 +95,15 @@ func assertQuestionAggreatatedResults(expectedResult QuestionAnsweredResults, re
 		case got := <-readingChan:
 			// NOTE: could be either a QuestionAnsweredResults OR a RoomCommandResponse, but for this function we only care about QuestionAnsweredResults, so we will just ignore the RoomCommandResponse
 			if result, ok := got.(QuestionAnsweredResults); ok {
-				if slices.Compare(result.CorrectUsers, expectedResult.CorrectUsers) != 0 || slices.Compare(result.IncorrectUsers, expectedResult.IncorrectUsers) != 0 {
+				gotCorrect := slices.Clone(result.CorrectUsers)
+				wantCorrect := slices.Clone(expectedResult.CorrectUsers)
+				slices.Sort(gotCorrect)
+				slices.Sort(wantCorrect)
+				gotIncorrect := slices.Clone(result.IncorrectUsers)
+				wantIncorrect := slices.Clone(expectedResult.IncorrectUsers)
+				slices.Sort(gotIncorrect)
+				slices.Sort(wantIncorrect)
+				if !slices.Equal(gotCorrect, wantCorrect) || !slices.Equal(gotIncorrect, wantIncorrect) {
 					t.Fatalf("ExpectedQuestionAggreatatedResults(%v) want:%v", result, expectedResult)
 				}
 				return result
