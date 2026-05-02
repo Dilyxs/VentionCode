@@ -53,10 +53,10 @@ func (r *Room) Run(ctx context.Context) {
 					cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentNoPermissionToJoin, Err: NewRoomError(RoomErrorInvalidUserID)}
 				}
 			case AddPlayerToWebsocketCommand:
-				localChan := make(chan Message, 1000)
+				// NOTE: choose not to check if user is valid here, since we want spectator to also see all current traveling messages
 				// go ReadFromWebsocket(cmd.Conn, r.SocketsConn, cmd.ID, ctx)
 				// go WriteToWebsocket(cmd.Conn, localChan, ctx)
-				r.SocketsConn[cmd.ID] = localChan
+				r.SocketsConn[cmd.ID] = cmd.NewMessageChan
 				// go WritePreviousMessagesToWebsocket(localChan, r.AllPreiousMessages, ctx)
 				cmd.get_sendback_chan() <- RoomCommandResponse{content: RoomCommandContentAddedWebsocket, Err: nil}
 

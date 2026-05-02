@@ -73,8 +73,9 @@ type AddPlayerCommand struct {
 	OutputChan chan RoomCommandResponse
 }
 type AddPlayerToWebsocketCommand struct {
-	ID         UserID
-	OutputChan chan RoomCommandResponse
+	ID             UserID
+	OutputChan     chan RoomCommandResponse
+	NewMessageChan chan Message
 }
 
 func (mes AddPlayerToWebsocketCommand) get_sendback_chan() chan RoomCommandResponse {

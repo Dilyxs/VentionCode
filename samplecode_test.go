@@ -39,6 +39,21 @@ func assertRoomCommandResponse(expectedResponse RoomCommandResponse, readingChan
 	}
 }
 
+func assertRoomNewMessage(expectedMessage Message, readingChan <-chan Message, t *testing.T) Message {
+	t.Helper()
+	select {
+	case <-time.After(defaultWaitTime):
+		var emptyMessage Message
+		t.Fatalf("ExpectedMessage did not arrive within delay: %v", defaultWaitTime)
+		return emptyMessage
+	case got := <-readingChan:
+		if got != expectedMessage {
+			t.Fatalf("ExpectedMessage(%v) want:%v", got, expectedMessage)
+		}
+		return got
+	}
+}
+
 // NOTE: for this test, we are not testing gonna build the room raw to test the cancel feature
 func TestRoom_RunExitsOnContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -136,4 +151,17 @@ func TestRoom_CheckIfUserAllowedToJoin(t *testing.T) {
 			assertRoomCommandResponse(tc.expectedResponse, responseChan, t)
 		})
 	}
+}
+
+func TestRoom_AddPlayerToWebsocketCommand(t *testing.T) {
+	t.Parallel()
+	room := buildRoom(t, false)
+	responseChan := make(chan RoomCommandResponse, 1)
+	newMessageChan := make(chan Message, 100)
+	addWebsocketCommand := AddPlayerToWebsocketCommand{ID: 1, OutputChan: responseChan, NewMessageChan: newMessageChan}
+	room.ExternalIncomingMessages <- addWebsocketCommand
+	assertRoomCommandResponse(RoomCommandResponse{content: RoomCommandContentAddedWebsocket, Err: nil}, responseChan, t)
+	// make sure a new message is able to be read
+	room.InternalIncomingMessages <- "test message"
+	assertRoomNewMessage("test message", newMessageChan, t)
 }
