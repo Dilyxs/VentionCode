@@ -54,6 +54,16 @@ func assertRoomNewMessage(expectedMessage Message, readingChan <-chan Message, t
 	}
 }
 
+func assertNoNewRoomMessage(readingChan <-chan Message, t *testing.T) {
+	t.Helper()
+	select {
+	case <-time.After(3 * defaultWaitTime):
+		return
+	case got := <-readingChan:
+		t.Fatalf("Expected no new message, but got: %v", got)
+	}
+}
+
 // NOTE: for this test, we are not testing gonna build the room raw to test the cancel feature
 func TestRoom_RunExitsOnContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -164,4 +174,18 @@ func TestRoom_AddPlayerToWebsocketCommand(t *testing.T) {
 	// make sure a new message is able to be read
 	room.InternalIncomingMessages <- "test message"
 	assertRoomNewMessage("test message", newMessageChan, t)
+}
+
+func TestRoom_UserDisconnection(t *testing.T) {
+	t.Parallel()
+	room := buildRoom(t, false)
+	responseChan := make(chan RoomCommandResponse, 1)
+	newMessageChan := make(chan Message, 100)
+	addWebsocketCommand := AddPlayerToWebsocketCommand{ID: 1, OutputChan: responseChan, NewMessageChan: newMessageChan}
+	room.ExternalIncomingMessages <- addWebsocketCommand
+	assertRoomCommandResponse(RoomCommandResponse{content: RoomCommandContentAddedWebsocket, Err: nil}, responseChan, t)
+	// now disconnect the user and make sure no new message is able to be read
+	room.InternalIncomingMessages <- UserDisconnection{ID: 1}
+	room.InternalIncomingMessages <- "test message"
+	assertNoNewRoomMessage(newMessageChan, t)
 }
